@@ -1,0 +1,391 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="Voice2Txt.Gui.Views.MainView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:conv="using:Voice2Txt.Gui.Converters"
+    xmlns:vm="using:Voice2Txt.Gui.ViewModels"
+    mc:Ignorable="d"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006">
+
+    <UserControl.Resources>
+        <conv:BoolToVisibilityConverter x:Key="BoolToVis" />
+        <conv:BoolToBrushConverter x:Key="WaveBrush"
+                                   TrueBrush="{ThemeResource DangerBrush}"
+                                   FalseBrush="{ThemeResource TextTertiaryBrush}" />
+        <conv:BoolToBrushConverter x:Key="ActiveSegBrush"
+                                   TrueBrush="{ThemeResource AccentSoftBrush}"
+                                   FalseBrush="Transparent" />
+
+        <!-- 위험(빨강) 버튼 -->
+        <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
+            <Setter Property="Foreground" Value="{ThemeResource DangerBrush}" />
+            <Setter Property="BorderBrush" Value="{ThemeResource DangerSoftBorderBrush}" />
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Background="Transparent">
+        <Grid.KeyboardAccelerators>
+            <KeyboardAccelerator Key="Space" Invoked="OnSpaceRecord" />
+        </Grid.KeyboardAccelerators>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="230" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- ── 사이드바 ── -->
+        <Grid Grid.Column="0" Background="{ThemeResource LayerFillColorAltBrush}"
+              BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="0,0,1,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- 새 녹음(메인으로 복귀) + 파일 불러오기 -->
+            <Grid Grid.Row="0" Margin="12,12,12,2" ColumnSpacing="6">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Button Grid.Column="0" HorizontalAlignment="Stretch"
+                        Command="{x:Bind ViewModel.NewRecordingCommand}">
+                    <StackPanel Orientation="Horizontal" Spacing="7">
+                        <FontIcon Glyph="&#xE710;" FontSize="14" />
+                        <TextBlock Text="새 녹음" />
+                    </StackPanel>
+                </Button>
+                <Button Grid.Column="1" Command="{x:Bind ViewModel.ImportAudioCommand}"
+                        ToolTipService.ToolTip="오디오 파일 불러오기">
+                    <FontIcon Glyph="&#xE8E5;" FontSize="14" />
+                </Button>
+            </Grid>
+
+            <!-- 헤더: 평소 '녹음 목록' / 녹음중 빨강 표시 -->
+            <Grid Grid.Row="1" Margin="16,10,16,8">
+                <TextBlock Text="녹음 목록" FontSize="12" FontWeight="SemiBold"
+                           Foreground="{ThemeResource TextSecondaryBrush}"
+                           Visibility="{x:Bind ViewModel.IsBusy, Mode=OneWay, Converter={StaticResource BoolToVis}, ConverterParameter=Invert}" />
+                <StackPanel Orientation="Horizontal" Spacing="6"
+                            Visibility="{x:Bind ViewModel.IsBusy, Mode=OneWay, Converter={StaticResource BoolToVis}}">
+                    <Ellipse Width="8" Height="8" Fill="{ThemeResource DangerBrush}" VerticalAlignment="Center" />
+                    <TextBlock Text="녹음 중" FontSize="12" FontWeight="SemiBold"
+                               Foreground="{ThemeResource DangerBrush}" />
+                </StackPanel>
+            </Grid>
+
+            <!-- 검색 -->
+            <AutoSuggestBox Grid.Row="2" Margin="12,0,12,6" PlaceholderText="검색" QueryIcon="Find"
+                            Text="{x:Bind ViewModel.SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+            <!-- 목록 -->
+            <ListView Grid.Row="3"
+                      ItemsSource="{x:Bind ViewModel.Recordings, Mode=OneWay}"
+                      SelectedItem="{x:Bind ViewModel.SelectedItem, Mode=TwoWay}"
+                      SelectionMode="Single" Padding="6,0">
+                <ListView.ItemContainerStyle>
+                    <Style TargetType="ListViewItem" BasedOn="{StaticResource DefaultListViewItemStyle}">
+                        <Setter Property="Margin" Value="0,1" />
+                        <Setter Property="Padding" Value="10,8" />
+                    </Style>
+                </ListView.ItemContainerStyle>
+                <ListView.ItemTemplate>
+                    <DataTemplate x:DataType="vm:RecordingItemViewModel">
+                        <Grid ColumnSpacing="8">
+                            <Grid.ContextFlyout>
+                                <MenuFlyout>
+                                    <MenuFlyoutItem Text="이름 수정" Click="OnRenameItem">
+                                        <MenuFlyoutItem.Icon>
+                                            <FontIcon Glyph="&#xE70F;" />
+                                        </MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                    <MenuFlyoutItem Text="삭제" Click="OnDeleteItem">
+                                        <MenuFlyoutItem.Icon>
+                                            <FontIcon Glyph="&#xE74D;" />
+                                        </MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                </MenuFlyout>
+                            </Grid.ContextFlyout>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" Spacing="2">
+                                <TextBlock Text="{x:Bind Name}" FontSize="13" FontWeight="Medium"
+                                           TextTrimming="CharacterEllipsis"
+                                           Foreground="{ThemeResource TextPrimaryBrush}" />
+                                <TextBlock Text="{x:Bind SubTitle}" FontSize="11"
+                                           Foreground="{ThemeResource TextTertiaryBrush}" />
+                            </StackPanel>
+                            <FontIcon Grid.Column="1" Glyph="&#xE73E;" FontSize="13"
+                                      Foreground="{ThemeResource AccentBrush}" VerticalAlignment="Center"
+                                      Visibility="{x:Bind IsTranscribed, Converter={StaticResource BoolToVis}}" />
+                        </Grid>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+
+            <!-- 빈 목록 / 검색 결과 없음 안내 -->
+            <TextBlock Grid.Row="3" Margin="20" TextAlignment="Center" TextWrapping="Wrap"
+                       VerticalAlignment="Center" HorizontalAlignment="Center"
+                       FontSize="12" Foreground="{ThemeResource TextTertiaryBrush}"
+                       Text="{x:Bind ViewModel.ListPlaceholder, Mode=OneWay}"
+                       Visibility="{x:Bind ViewModel.ShowListPlaceholder, Mode=OneWay, Converter={StaticResource BoolToVis}}" />
+
+            <!-- 변환 모델 (실시간 자막 항목 포함) -->
+            <Border Grid.Row="4" Padding="12,8"
+                    BorderBrush="{ThemeResource Hairline2Brush}" BorderThickness="0,1,0,0">
+                <StackPanel Spacing="4">
+                    <TextBlock Text="변환 모델" FontSize="11" Foreground="{ThemeResource TextTertiaryBrush}" />
+                    <ComboBox HorizontalAlignment="Stretch"
+                              ItemsSource="{x:Bind ViewModel.AvailableModels}"
+                              SelectedItem="{x:Bind ViewModel.SelectedModel, Mode=TwoWay}"
+                              DisplayMemberPath="MenuLabel" />
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- ── 작업 영역 ── -->
+        <Grid Grid.Column="1">
+
+            <!-- 화면 1: 대기 / 메인 -->
+            <StackPanel Visibility="{x:Bind ViewModel.IsIdle, Mode=OneWay, Converter={StaticResource BoolToVis}}"
+                        HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="18">
+                <Button Command="{x:Bind ViewModel.StartRecordingCommand}"
+                        Width="92" Height="92" CornerRadius="46" HorizontalAlignment="Center"
+                        Background="{ThemeResource DangerSoftBrush}"
+                        BorderBrush="{ThemeResource DangerBrush}" BorderThickness="2">
+                    <FontIcon Glyph="&#xE720;" FontSize="36" Foreground="{ThemeResource DangerBrush}" />
+                </Button>
+
+                <TextBlock Text="녹음 시작" FontSize="15" FontWeight="SemiBold" HorizontalAlignment="Center"
+                           Foreground="{ThemeResource TextPrimaryBrush}" />
+                <TextBlock Text="{x:Bind ViewModel.StatusText, Mode=OneWay}" FontSize="12"
+                           HorizontalAlignment="Center" TextAlignment="Center" MaxWidth="420" TextWrapping="Wrap"
+                           Foreground="{ThemeResource TextTertiaryBrush}" />
+
+                <HyperlinkButton Content="또는 오디오 파일 불러오기 (mp3·m4a·wav)"
+                                 HorizontalAlignment="Center"
+                                 Command="{x:Bind ViewModel.ImportAudioCommand}" />
+            </StackPanel>
+
+            <!-- 화면 2: 녹음 중 -->
+            <StackPanel Visibility="{x:Bind ViewModel.IsBusy, Mode=OneWay, Converter={StaticResource BoolToVis}}"
+                        HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="18" Padding="28">
+                <TextBlock Text="{x:Bind ViewModel.ElapsedText, Mode=OneWay}"
+                           FontFamily="{ThemeResource MonoFont}" FontSize="40" FontWeight="SemiBold"
+                           HorizontalAlignment="Center" Foreground="{ThemeResource TextPrimaryBrush}" />
+
+                <ItemsControl ItemsSource="{x:Bind ViewModel.WaveBars, Mode=OneWay}"
+                              Height="60" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:WaveBar">
+                            <Rectangle Width="4" Margin="1.5,0" RadiusX="2" RadiusY="2"
+                                       Height="{x:Bind Height, Mode=OneWay}" VerticalAlignment="Center"
+                                       Fill="{x:Bind Hot, Mode=OneWay, Converter={StaticResource WaveBrush}}" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="12">
+                    <Button Command="{x:Bind ViewModel.TogglePauseCommand}" MinWidth="96">
+                        <StackPanel Orientation="Horizontal" Spacing="7">
+                            <FontIcon Glyph="&#xE769;" FontSize="13" />
+                            <TextBlock Text="{x:Bind ViewModel.PauseButtonText, Mode=OneWay}" />
+                        </StackPanel>
+                    </Button>
+                    <Button Command="{x:Bind ViewModel.StopRecordingCommand}" MinWidth="96"
+                            Style="{StaticResource DangerButton}">
+                        <StackPanel Orientation="Horizontal" Spacing="7">
+                            <FontIcon Glyph="&#xE71A;" FontSize="13" />
+                            <TextBlock Text="정지" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+
+                <!-- 실시간 자막 -->
+                <Border Width="480" MaxHeight="180" CornerRadius="5" Padding="14,12" Margin="0,8,0,0"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource Hairline2Brush}" BorderThickness="1"
+                        Visibility="{x:Bind ViewModel.ShowLiveCaptions, Mode=OneWay, Converter={StaticResource BoolToVis}}">
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="실시간 자막" FontSize="11"
+                                   Foreground="{ThemeResource TextTertiaryBrush}" />
+                        <ScrollViewer x:Name="LiveScroll" MaxHeight="130" VerticalScrollBarVisibility="Auto">
+                            <TextBlock Text="{x:Bind ViewModel.LiveText, Mode=OneWay}" TextWrapping="Wrap"
+                                       FontSize="14" Foreground="{ThemeResource TextPrimaryBrush}"
+                                       IsTextSelectionEnabled="True" />
+                        </ScrollViewer>
+                    </StackPanel>
+                </Border>
+
+            </StackPanel>
+
+            <!-- 화면 4: 변환 중 -->
+            <StackPanel Visibility="{x:Bind ViewModel.IsConverting, Mode=OneWay, Converter={StaticResource BoolToVis}}"
+                        HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="15">
+                <FontIcon Glyph="&#xE8A5;" FontSize="44" HorizontalAlignment="Center"
+                          Foreground="{ThemeResource AccentBrush}" />
+                <TextBlock Text="{x:Bind ViewModel.ConvertStatus, Mode=OneWay}" FontSize="15" FontWeight="SemiBold"
+                           HorizontalAlignment="Center" Foreground="{ThemeResource TextPrimaryBrush}" />
+                <StackPanel Width="320" Spacing="7">
+                    <ProgressBar Value="{x:Bind ViewModel.ConvertPercent, Mode=OneWay}" Maximum="100" Height="8" />
+                    <TextBlock Text="{x:Bind ViewModel.ConvertProgressText, Mode=OneWay}"
+                               FontFamily="{ThemeResource MonoFont}" FontSize="12"
+                               Foreground="{ThemeResource TextSecondaryBrush}" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="7" HorizontalAlignment="Center">
+                    <FontIcon Glyph="&#xE767;" FontSize="14" Foreground="{ThemeResource TextTertiaryBrush}" />
+                    <TextBlock Text="{x:Bind ViewModel.ConvertEngineLabel, Mode=OneWay}" FontSize="12"
+                               Foreground="{ThemeResource TextTertiaryBrush}" />
+                </StackPanel>
+                <Button Command="{x:Bind ViewModel.CancelConvertCommand}" Content="취소" HorizontalAlignment="Center" />
+            </StackPanel>
+
+            <!-- 화면 5: 재생 + 텍스트 결과 -->
+            <Grid Visibility="{x:Bind ViewModel.IsDetail, Mode=OneWay, Converter={StaticResource BoolToVis}}"
+                  Padding="18,16">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <!-- 헤더 -->
+                <Grid Grid.Row="0" ColumnSpacing="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" Spacing="2">
+                        <TextBlock Text="{x:Bind ViewModel.Detail.Title, Mode=OneWay}" FontSize="15" FontWeight="SemiBold"
+                                   TextTrimming="CharacterEllipsis" Foreground="{ThemeResource TextPrimaryBrush}" />
+                        <TextBlock Text="{x:Bind ViewModel.Detail.Meta, Mode=OneWay}" FontSize="12"
+                                   Foreground="{ThemeResource TextTertiaryBrush}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Top">
+                        <TextBlock Text="{x:Bind ViewModel.Detail.CopyFeedback, Mode=OneWay}"
+                                   VerticalAlignment="Center" FontSize="12" Margin="0,0,4,0"
+                                   Foreground="{ThemeResource AccentBrush}" />
+                        <Button Command="{x:Bind ViewModel.Detail.OpenInFolderCommand, Mode=OneWay}"
+                                ToolTipService.ToolTip="폴더에서 보기" Padding="8" Background="Transparent" BorderThickness="0">
+                            <FontIcon Glyph="&#xE838;" FontSize="16" />
+                        </Button>
+                        <Button Command="{x:Bind ViewModel.Detail.CopyCommand, Mode=OneWay}"
+                                ToolTipService.ToolTip="복사" Padding="8" Background="Transparent" BorderThickness="0"
+                                Visibility="{x:Bind ViewModel.Detail.IsTranscribed, Mode=OneWay, Converter={StaticResource BoolToVis}}">
+                            <FontIcon Glyph="&#xE8C8;" FontSize="16" />
+                        </Button>
+                        <Button Command="{x:Bind ViewModel.Detail.DeleteCommand, Mode=OneWay}"
+                                ToolTipService.ToolTip="삭제" Padding="8" Background="Transparent" BorderThickness="0">
+                            <FontIcon Glyph="&#xE74D;" FontSize="16" Foreground="{ThemeResource DangerBrush}" />
+                        </Button>
+                    </StackPanel>
+                </Grid>
+
+                <!-- 재생 -->
+                <Border Grid.Row="1" Margin="0,14" CornerRadius="5" Padding="13,10"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource Hairline2Brush}" BorderThickness="1">
+                    <Grid ColumnSpacing="13">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Command="{x:Bind ViewModel.Detail.PlayPauseCommand, Mode=OneWay}"
+                                Width="38" Height="38" CornerRadius="19" Padding="0"
+                                Background="Transparent" BorderThickness="0">
+                            <FontIcon Glyph="{x:Bind ViewModel.Detail.PlayGlyph, Mode=OneWay}" FontSize="18"
+                                      Foreground="{ThemeResource AccentBrush}" />
+                        </Button>
+                        <Slider Grid.Column="1" VerticalAlignment="Center"
+                                Maximum="{x:Bind ViewModel.Detail.DurationSeconds, Mode=OneWay}"
+                                Value="{x:Bind ViewModel.Detail.PositionSeconds, Mode=TwoWay}" StepFrequency="1" />
+                        <TextBlock Grid.Column="2" VerticalAlignment="Center"
+                                   Text="{x:Bind ViewModel.Detail.PositionText, Mode=OneWay}"
+                                   FontFamily="{ThemeResource MonoFont}" FontSize="12"
+                                   Foreground="{ThemeResource TextSecondaryBrush}" />
+                    </Grid>
+                </Border>
+
+                <!-- transcript / 변환 안내 -->
+                <Border Grid.Row="2" CornerRadius="5" Padding="6"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource Hairline2Brush}" BorderThickness="1">
+                    <Grid>
+                        <!-- 변환 안 됨 -->
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12"
+                                    Visibility="{x:Bind ViewModel.Detail.NotTranscribed, Mode=OneWay, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="아직 변환되지 않은 녹음입니다." HorizontalAlignment="Center"
+                                       Foreground="{ThemeResource TextTertiaryBrush}" />
+                            <Button Command="{x:Bind ViewModel.Detail.ConvertCommand, Mode=OneWay}"
+                                    Content="텍스트로 변환" HorizontalAlignment="Center"
+                                    Style="{ThemeResource AccentButtonStyle}" />
+                        </StackPanel>
+
+                        <!-- 변환됐지만 인식 텍스트 없음(무음) -->
+                        <TextBlock Text="인식된 텍스트가 없습니다."
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                   Foreground="{ThemeResource TextTertiaryBrush}"
+                                   Visibility="{x:Bind ViewModel.Detail.ShowEmptyResult, Mode=OneWay, Converter={StaticResource BoolToVis}}" />
+
+                        <!-- transcript -->
+                        <ListView x:Name="SegmentList"
+                                  ItemsSource="{x:Bind ViewModel.Detail.Segments, Mode=OneWay}"
+                                  IsItemClickEnabled="True" SelectionMode="None" ItemClick="OnSegmentClick"
+                                  Visibility="{x:Bind ViewModel.Detail.ShowTranscriptList, Mode=OneWay, Converter={StaticResource BoolToVis}}">
+                            <ListView.ItemTemplate>
+                                <DataTemplate x:DataType="vm:SegmentRow">
+                                    <Grid ColumnSpacing="10" Padding="6,5" CornerRadius="4"
+                                          Background="{x:Bind IsActive, Mode=OneWay, Converter={StaticResource ActiveSegBrush}}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{x:Bind TimeLabel}"
+                                                   FontFamily="{ThemeResource MonoFont}" FontSize="11"
+                                                   Foreground="{ThemeResource TextTertiaryBrush}" VerticalAlignment="Top"
+                                                   Margin="0,2,0,0" />
+                                        <TextBlock Grid.Column="1" Text="{x:Bind Text}" FontSize="13"
+                                                   TextWrapping="Wrap" IsTextSelectionEnabled="True"
+                                                   Foreground="{ThemeResource TextPrimaryBrush}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+
+                        <!-- 편집 -->
+                        <TextBox AcceptsReturn="True" TextWrapping="Wrap" Margin="2"
+                                 Text="{x:Bind ViewModel.Detail.EditText, Mode=TwoWay}"
+                                 Visibility="{x:Bind ViewModel.Detail.IsEditing, Mode=OneWay, Converter={StaticResource BoolToVis}}" />
+                    </Grid>
+                </Border>
+
+                <!-- 하단 액션 -->
+                <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="8" Margin="0,14,0,0"
+                            HorizontalAlignment="Right"
+                            Visibility="{x:Bind ViewModel.Detail.IsTranscribed, Mode=OneWay, Converter={StaticResource BoolToVis}}">
+                    <Button Command="{x:Bind ViewModel.Detail.ToggleEditCommand, Mode=OneWay}" Content="편집"
+                            Visibility="{x:Bind ViewModel.Detail.IsReadOnlyView, Mode=OneWay, Converter={StaticResource BoolToVis}}" />
+                    <Button Command="{x:Bind ViewModel.Detail.SaveEditCommand, Mode=OneWay}" Content="편집 저장"
+                            Style="{ThemeResource AccentButtonStyle}"
+                            Visibility="{x:Bind ViewModel.Detail.IsEditing, Mode=OneWay, Converter={StaticResource BoolToVis}}" />
+                    <Button Command="{x:Bind ViewModel.Detail.ConvertCommand, Mode=OneWay}" Content="다시 변환"
+                            ToolTipService.ToolTip="현재 선택한 모델로 다시 변환"
+                            Visibility="{x:Bind ViewModel.Detail.IsReadOnlyView, Mode=OneWay, Converter={StaticResource BoolToVis}}" />
+                    <Button Command="{x:Bind ViewModel.Detail.ExportTxtCommand, Mode=OneWay}" Content="TXT 내보내기" />
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </Grid>
+</UserControl>

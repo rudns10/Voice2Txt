@@ -1,0 +1,24 @@
+# Build output
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+*.user
+
+# Rider / VS
+.vs/
+.idea/
+
+# 모델 파일 / 외부 바이너리 (커밋 금지 — 첫 실행 시 다운로드)
+models/
+tools/whisper-cpp/
+
+# 배포 산출물
+dist/
+
+# 로컬 데이터 (녹음/transcript/sqlite)
+data/
+*.wav
+*.db
+*.db-shm
+*.db-wal

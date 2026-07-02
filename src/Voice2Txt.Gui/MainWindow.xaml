@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="Voice2Txt.Gui.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    mc:Ignorable="d"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006">
+
+    <Grid x:Name="RootGrid">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- 커스텀 제목줄 (드래그 영역) -->
+        <Grid x:Name="AppTitleBar" Grid.Row="0" Height="40" Background="Transparent">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
+                        Margin="14,0,0,0" Spacing="9">
+                <FontIcon Glyph="&#xE720;" FontSize="16" Foreground="{ThemeResource AccentBrush}" />
+                <TextBlock Text="Voice2Txt" FontSize="12.5" FontWeight="SemiBold"
+                           VerticalAlignment="Center" Foreground="{ThemeResource TextPrimaryBrush}" />
+            </StackPanel>
+
+            <!-- 테마 버튼 (캡션 버튼 영역 피해 오른쪽 끝에서 140 띄움) -->
+            <Button x:Name="ThemeButton" HorizontalAlignment="Right" VerticalAlignment="Center"
+                    Margin="0,0,140,0" Width="40" Height="30" Padding="0"
+                    Background="Transparent" BorderThickness="0"
+                    ToolTipService.ToolTip="테마">
+                <FontIcon Glyph="&#xE706;" FontSize="15" Foreground="{ThemeResource TextSecondaryBrush}" />
+                <Button.Flyout>
+                    <MenuFlyout>
+                        <RadioMenuFlyoutItem x:Name="ThemeSystem" Text="시스템 설정 따름"
+                                             GroupName="theme" Tag="System" Click="OnThemeSelected" />
+                        <RadioMenuFlyoutItem x:Name="ThemeLight" Text="라이트"
+                                             GroupName="theme" Tag="Light" Click="OnThemeSelected" />
+                        <RadioMenuFlyoutItem x:Name="ThemeDark" Text="다크"
+                                             GroupName="theme" Tag="Dark" Click="OnThemeSelected" />
+                    </MenuFlyout>
+                </Button.Flyout>
+            </Button>
+        </Grid>
+
+        <!-- 콘텐츠(MainView)는 DI로 주입 -->
+        <Grid x:Name="RootContainer" Grid.Row="1" />
+    </Grid>
+</Window>
