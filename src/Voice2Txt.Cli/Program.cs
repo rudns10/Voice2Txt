@@ -30,9 +30,10 @@ if (args[0] == "transcribe")
     var engine = GetOption(args, "--engine", "cpp");   // cpp | net
     var threads = int.TryParse(GetOption(args, "--threads", "4"), out var t) ? t : 4;
 
-    var model = modelKey.StartsWith("medium", StringComparison.OrdinalIgnoreCase)
-        ? WhisperModelCatalog.Medium
-        : WhisperModelCatalog.Small;
+    // small / medium / large(-v3-turbo) 등 카탈로그 키(또는 접두어)로 선택
+    var model = WhisperModelCatalog.All.FirstOrDefault(m =>
+                    m.Key.StartsWith(modelKey, StringComparison.OrdinalIgnoreCase))
+                ?? WhisperModelCatalog.Small;
 
     var modelManager = new WhisperModelManager();
     ITranscriber transcriber = engine.Equals("net", StringComparison.OrdinalIgnoreCase)

@@ -86,6 +86,8 @@ public sealed class LiveCaptionService : IDisposable
                     }
                 }
                 if (data is null) continue;
+                // 무음/저음량 청크는 변환하지 않는다 → "감사합니다" 등 무음 환각 원천 차단
+                if (IsSilent(data)) continue;
 
                 var tempWav = Path.Combine(StoragePaths.StagingDir, $"live_{Guid.NewGuid():N}.wav");
                 try
@@ -103,6 +105,23 @@ public sealed class LiveCaptionService : IDisposable
             }
         }
         catch (OperationCanceledException) { /* 정상 종료 */ }
+    }
+
+    // 이 값 이하의 RMS(16-bit)는 사실상 무음으로 간주. 조용한 방(~수십)~말소리(~1000+) 사이.
+    private const double SilenceRmsThreshold = 350;
+
+    /// <summary>16-bit PCM 청크의 RMS를 계산해 무음 여부를 판정한다.</summary>
+    private static bool IsSilent(byte[] pcm)
+    {
+        int n = pcm.Length / 2;
+        if (n == 0) return true;
+        double sumSq = 0;
+        for (int i = 0; i + 1 < pcm.Length; i += 2)
+        {
+            short s = (short)(pcm[i] | (pcm[i + 1] << 8));
+            sumSq += (double)s * s;
+        }
+        return Math.Sqrt(sumSq / n) < SilenceRmsThreshold;
     }
 
     private static void WriteWav(string path, byte[] pcm)

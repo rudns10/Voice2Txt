@@ -9,55 +9,99 @@
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
             </ResourceDictionary.MergedDictionaries>
 
-            <!-- 목업 팔레트(라이트/다크) -->
+            <!-- 모던 SaaS 팔레트(라이트/다크). 시스템 브러시 일부를 함께 재정의해 전역 적용 -->
             <ResourceDictionary.ThemeDictionaries>
                 <ResourceDictionary x:Key="Light">
-                    <Color x:Key="AppBgColor">#E9EDF2</Color>
-                    <SolidColorBrush x:Key="AppBgBrush" Color="#E9EDF2" />
-                    <SolidColorBrush x:Key="WinBrush" Color="#FBFBFB" />
+                    <!-- 앱 배경 / 표면 -->
+                    <Color x:Key="AppBgColor">#F4F5F8</Color>
+                    <SolidColorBrush x:Key="AppBgBrush" Color="#F4F5F8" />
+                    <SolidColorBrush x:Key="WinBrush" Color="#FBFBFD" />
                     <SolidColorBrush x:Key="CardBrush" Color="#FFFFFF" />
-                    <SolidColorBrush x:Key="Surface2Brush" Color="#F1F3F6" />
-                    <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#F5F6F8" />
-                    <SolidColorBrush x:Key="HairlineBrush" Color="#14000000" />
-                    <SolidColorBrush x:Key="Hairline2Brush" Color="#0F000000" />
-                    <SolidColorBrush x:Key="TextPrimaryBrush" Color="#1B1B1B" />
-                    <SolidColorBrush x:Key="TextSecondaryBrush" Color="#5C5C5C" />
-                    <SolidColorBrush x:Key="TextTertiaryBrush" Color="#8C8C8C" />
-                    <SolidColorBrush x:Key="AccentBrush" Color="#005FB8" />
-                    <SolidColorBrush x:Key="Accent2Brush" Color="#0067C0" />
-                    <SolidColorBrush x:Key="AccentSoftBrush" Color="#EEF5FC" />
-                    <SolidColorBrush x:Key="AccentSoftBorderBrush" Color="#CFE4F7" />
+                    <SolidColorBrush x:Key="Surface2Brush" Color="#F1F2F6" />
+                    <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#F3F4F8" />
+                    <SolidColorBrush x:Key="HairlineBrush" Color="#12101828" />
+                    <SolidColorBrush x:Key="Hairline2Brush" Color="#0F101828" />
+                    <!-- 텍스트 -->
+                    <SolidColorBrush x:Key="TextPrimaryBrush" Color="#16181D" />
+                    <SolidColorBrush x:Key="TextSecondaryBrush" Color="#585C66" />
+                    <SolidColorBrush x:Key="TextTertiaryBrush" Color="#9096A1" />
+                    <!-- 인디고 액센트 -->
+                    <SolidColorBrush x:Key="AccentBrush" Color="#5B5BF0" />
+                    <SolidColorBrush x:Key="Accent2Brush" Color="#4F4FE8" />
+                    <SolidColorBrush x:Key="AccentSoftBrush" Color="#EEEEFE" />
+                    <SolidColorBrush x:Key="AccentSoftBorderBrush" Color="#DADAFB" />
                     <SolidColorBrush x:Key="OnAccentBrush" Color="#FFFFFF" />
-                    <SolidColorBrush x:Key="DangerBrush" Color="#C42B1C" />
-                    <SolidColorBrush x:Key="DangerSoftBrush" Color="#FDF1F0" />
-                    <SolidColorBrush x:Key="DangerSoftBorderBrush" Color="#F3D2CF" />
+                    <!-- 위험(빨강) -->
+                    <SolidColorBrush x:Key="DangerBrush" Color="#DC2F35" />
+                    <SolidColorBrush x:Key="DangerSoftBrush" Color="#FDF0F0" />
+                    <SolidColorBrush x:Key="DangerSoftBorderBrush" Color="#F6D4D5" />
+                    <!-- 녹음 버튼 전용(눈부심 완화한 부드러운 빨강) -->
+                    <SolidColorBrush x:Key="RecordFillBrush" Color="#F0656A" />
+
+                    <!-- WinUI 시스템 브러시 재정의(전역 카드/사이드바/액센트 버튼) -->
+                    <SolidColorBrush x:Key="CardBackgroundFillColorDefaultBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="CardBackgroundFillColorSecondaryBrush" Color="#F7F8FB" />
+                    <SolidColorBrush x:Key="LayerFillColorAltBrush" Color="#FBFBFD" />
+                    <SolidColorBrush x:Key="CardStrokeColorDefaultBrush" Color="#12101828" />
+                    <Color x:Key="SystemAccentColor">#5B5BF0</Color>
+                    <SolidColorBrush x:Key="AccentFillColorDefaultBrush" Color="#5B5BF0" />
+                    <SolidColorBrush x:Key="AccentFillColorSecondaryBrush" Color="#5454E8" />
+                    <SolidColorBrush x:Key="AccentFillColorTertiaryBrush" Color="#4A4ADE" />
+                    <SolidColorBrush x:Key="TextOnAccentFillColorPrimaryBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="TextOnAccentFillColorSecondaryBrush" Color="#EDEDFF" />
                 </ResourceDictionary>
 
                 <ResourceDictionary x:Key="Dark">
-                    <Color x:Key="AppBgColor">#161616</Color>
-                    <SolidColorBrush x:Key="AppBgBrush" Color="#161616" />
-                    <SolidColorBrush x:Key="WinBrush" Color="#2B2B2B" />
-                    <SolidColorBrush x:Key="CardBrush" Color="#2C2C2C" />
-                    <SolidColorBrush x:Key="Surface2Brush" Color="#383838" />
-                    <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#333333" />
-                    <SolidColorBrush x:Key="HairlineBrush" Color="#17FFFFFF" />
-                    <SolidColorBrush x:Key="Hairline2Brush" Color="#0FFFFFFF" />
-                    <SolidColorBrush x:Key="TextPrimaryBrush" Color="#FAFAFA" />
-                    <SolidColorBrush x:Key="TextSecondaryBrush" Color="#CCCCCC" />
-                    <SolidColorBrush x:Key="TextTertiaryBrush" Color="#959595" />
-                    <SolidColorBrush x:Key="AccentBrush" Color="#60CDFF" />
-                    <SolidColorBrush x:Key="Accent2Brush" Color="#4CC2FF" />
-                    <SolidColorBrush x:Key="AccentSoftBrush" Color="#102433" />
-                    <SolidColorBrush x:Key="AccentSoftBorderBrush" Color="#21455E" />
-                    <SolidColorBrush x:Key="OnAccentBrush" Color="#06283A" />
-                    <SolidColorBrush x:Key="DangerBrush" Color="#FF99A4" />
-                    <SolidColorBrush x:Key="DangerSoftBrush" Color="#33201F" />
-                    <SolidColorBrush x:Key="DangerSoftBorderBrush" Color="#5A3331" />
+                    <Color x:Key="AppBgColor">#0F1116</Color>
+                    <SolidColorBrush x:Key="AppBgBrush" Color="#0F1116" />
+                    <SolidColorBrush x:Key="WinBrush" Color="#16181F" />
+                    <SolidColorBrush x:Key="CardBrush" Color="#191C23" />
+                    <SolidColorBrush x:Key="Surface2Brush" Color="#22252E" />
+                    <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#20232B" />
+                    <SolidColorBrush x:Key="HairlineBrush" Color="#1AFFFFFF" />
+                    <SolidColorBrush x:Key="Hairline2Brush" Color="#12FFFFFF" />
+                    <SolidColorBrush x:Key="TextPrimaryBrush" Color="#F2F3F6" />
+                    <SolidColorBrush x:Key="TextSecondaryBrush" Color="#B4B9C4" />
+                    <SolidColorBrush x:Key="TextTertiaryBrush" Color="#7C818D" />
+                    <SolidColorBrush x:Key="AccentBrush" Color="#8B8BFF" />
+                    <SolidColorBrush x:Key="Accent2Brush" Color="#7A7AFF" />
+                    <SolidColorBrush x:Key="AccentSoftBrush" Color="#1C1D3A" />
+                    <SolidColorBrush x:Key="AccentSoftBorderBrush" Color="#33346A" />
+                    <SolidColorBrush x:Key="OnAccentBrush" Color="#0B0C15" />
+                    <SolidColorBrush x:Key="DangerBrush" Color="#FF6B72" />
+                    <SolidColorBrush x:Key="DangerSoftBrush" Color="#2A1719" />
+                    <SolidColorBrush x:Key="DangerSoftBorderBrush" Color="#57312F" />
+                    <!-- 녹음 버튼 전용(눈부심 완화한 부드러운 빨강) -->
+                    <SolidColorBrush x:Key="RecordFillBrush" Color="#E06A70" />
+
+                    <SolidColorBrush x:Key="CardBackgroundFillColorDefaultBrush" Color="#191C23" />
+                    <SolidColorBrush x:Key="CardBackgroundFillColorSecondaryBrush" Color="#14161C" />
+                    <SolidColorBrush x:Key="LayerFillColorAltBrush" Color="#16181F" />
+                    <SolidColorBrush x:Key="CardStrokeColorDefaultBrush" Color="#1AFFFFFF" />
+                    <Color x:Key="SystemAccentColor">#8B8BFF</Color>
+                    <SolidColorBrush x:Key="AccentFillColorDefaultBrush" Color="#8B8BFF" />
+                    <SolidColorBrush x:Key="AccentFillColorSecondaryBrush" Color="#7E7EF5" />
+                    <SolidColorBrush x:Key="AccentFillColorTertiaryBrush" Color="#7070E8" />
+                    <SolidColorBrush x:Key="TextOnAccentFillColorPrimaryBrush" Color="#0B0C15" />
+                    <SolidColorBrush x:Key="TextOnAccentFillColorSecondaryBrush" Color="#1A1B30" />
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
 
+            <!-- 전역 라운드: 컨트롤 8 / 오버레이(카드·플라이아웃·다이얼로그) 12 -->
+            <CornerRadius x:Key="ControlCornerRadius">8</CornerRadius>
+            <CornerRadius x:Key="OverlayCornerRadius">12</CornerRadius>
+
             <!-- 모노 폰트(타임코드/타임스탬프) -->
             <FontFamily x:Key="MonoFont">Cascadia Mono, Consolas, Courier New</FontFamily>
+
+            <!-- 재사용 스타일: 둥근 카드 -->
+            <Style x:Key="Card" TargetType="Border">
+                <Setter Property="Background" Value="{ThemeResource CardBrush}" />
+                <Setter Property="BorderBrush" Value="{ThemeResource Hairline2Brush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="12" />
+                <Setter Property="Padding" Value="14" />
+            </Style>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

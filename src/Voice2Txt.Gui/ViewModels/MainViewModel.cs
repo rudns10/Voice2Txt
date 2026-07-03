@@ -84,6 +84,22 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private RecordingDetailViewModel? _detail;
 
+    // ── 일괄 삭제(다중 선택 모드) ──
+    /// <summary>다중 선택(일괄 삭제) 모드 여부.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsIdle))]
+    [NotifyPropertyChangedFor(nameof(IsDetail))]
+    private bool _isSelectionMode;
+
+    /// <summary>현재 체크된 항목 수.</summary>
+    public int CheckedCount => _all.Count(i => i.IsChecked);
+
+    /// <summary>"삭제 (n)" 버튼 라벨.</summary>
+    public string SelectionDeleteLabel => CheckedCount > 0 ? $"삭제 ({CheckedCount})" : "삭제";
+
+    /// <summary>플로팅 바 좌측 안내 텍스트.</summary>
+    public string SelectionCountText => CheckedCount > 0 ? $"{CheckedCount}개 선택됨" : "삭제할 항목을 체크하세요";
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ConvertProgressText))]
     private double _convertPercent;
@@ -112,11 +128,11 @@ public partial class MainViewModel : ObservableObject
     /// <summary>"Whisper small (q5_1) · 로컬(오프라인) 처리" 표시.</summary>
     public string ConvertEngineLabel => $"Whisper {SelectedModel.DisplayName} · 로컬(오프라인) 처리";
 
-    /// <summary>대기 화면(녹음 전, 선택 없음) 표시 여부.</summary>
-    public bool IsIdle => !IsBusy && !IsConverting && SelectedItem is null;
+    /// <summary>대기 화면(녹음 전) 표시 여부.</summary>
+    public bool IsIdle => !IsBusy && !IsConverting && !IsDetail;
 
-    /// <summary>결과/상세 화면 표시 여부.</summary>
-    public bool IsDetail => !IsBusy && !IsConverting && SelectedItem is not null;
+    /// <summary>결과/상세 화면 표시 여부. 선택 모드에서는 내비게이션을 억제한다.</summary>
+    public bool IsDetail => !IsBusy && !IsConverting && !IsSelectionMode && SelectedItem is not null;
 
     /// <summary>일시정지/재개 버튼 라벨.</summary>
     public string PauseButtonText => IsPaused ? "재개" : "일시정지";
@@ -172,7 +188,12 @@ public partial class MainViewModel : ObservableObject
             var all = await _store.GetAllAsync();
             _all.Clear();
             foreach (var r in all)
-                _all.Add(new RecordingItemViewModel(r));
+            {
+                var item = new RecordingItemViewModel(r);
+                item.PropertyChanged += OnItemPropertyChanged;
+                _all.Add(item);
+            }
+            IsSelectionMode = false;   // 목록이 바뀌면 선택 모드 해제
             ApplyFilter();
         }
         catch (Exception ex)
@@ -193,6 +214,12 @@ public partial class MainViewModel : ObservableObject
         _warmupCts = new CancellationTokenSource();
         var path = _models.GetModelPath(SelectedModel);
         _ = _transcriber.WarmupAsync(path, _warmupCts.Token);
+    }
+
+    private void OnItemPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(RecordingItemViewModel.IsChecked))
+            NotifyCheckedChanged();
     }
 
     partial void OnSearchTextChanged(string value) => ApplyFilter();
@@ -254,7 +281,8 @@ public partial class MainViewModel : ObservableObject
         // 이전 상세 정리(재생 중지/리소스 해제)
         Detail?.Dispose();
 
-        if (value is null)
+        // 선택(일괄 삭제) 모드에서는 상세 화면으로 넘어가지 않는다.
+        if (value is null || IsSelectionMode)
         {
             Detail = null;
             return;
@@ -273,6 +301,103 @@ public partial class MainViewModel : ObservableObject
         SelectedItem = null;            // 상세 닫기 + Detail dispose
         await LoadAsync();
         StatusText = $"삭제됨: {rec.Name}";
+    }
+
+    partial void OnIsSelectionModeChanged(bool value)
+    {
+        if (value)
+            SelectedItem = null;        // 상세 닫고 사이드바로
+        else
+            ClearChecks();              // 모드 종료 시 체크 해제
+
+        foreach (var i in _all) i.SelectionMode = value;  // 각 항목 체크박스 표시 토글
+    }
+
+    private void ClearChecks()
+    {
+        foreach (var i in _all) i.IsChecked = false;
+        OnPropertyChanged(nameof(CheckedCount));
+        OnPropertyChanged(nameof(SelectionDeleteLabel));
+    }
+
+    /// <summary>선택(일괄 삭제) 모드 진입/종료 토글.</summary>
+    [RelayCommand]
+    private void ToggleSelectionMode() => IsSelectionMode = !IsSelectionMode;
+
+    /// <summary>체크된 항목을 한 번에 삭제.</summary>
+    [RelayCommand]
+    private async Task DeleteSelectedAsync()
+    {
+        var targets = _all.Where(i => i.IsChecked).ToList();
+        if (targets.Count == 0)
+        {
+            StatusText = "선택된 항목이 없습니다.";
+            return;
+        }
+
+        var ok = await _dialog.ConfirmAsync(
+            "선택 삭제", $"선택한 {targets.Count}개 녹음을 삭제할까요? 되돌릴 수 없습니다.", "삭제");
+        if (!ok) return;
+
+        var n = await DeleteItemsAsync(targets);
+        IsSelectionMode = false;
+        StatusText = $"{n}개 삭제됨";
+    }
+
+    /// <summary>현재 목록(검색 필터 적용)에 보이는 모든 녹음을 삭제.</summary>
+    [RelayCommand]
+    private async Task DeleteAllAsync()
+    {
+        var targets = Recordings.ToList();
+        if (targets.Count == 0)
+        {
+            StatusText = "삭제할 항목이 없습니다.";
+            return;
+        }
+
+        var scope = SearchText.Trim().Length > 0 ? "검색된 " : "전체 ";
+        var ok = await _dialog.ConfirmAsync(
+            "전체 삭제", $"{scope}{targets.Count}개 녹음을 모두 삭제할까요? 되돌릴 수 없습니다.", "삭제");
+        if (!ok) return;
+
+        var n = await DeleteItemsAsync(targets);
+        IsSelectionMode = false;
+        StatusText = $"{n}개 삭제됨";
+    }
+
+    /// <summary>여러 항목의 파일 + transcript + 메타데이터를 삭제하고 목록을 새로고침한다. (확인창은 호출부에서 1회)</summary>
+    private async Task<int> DeleteItemsAsync(IReadOnlyList<RecordingItemViewModel> items)
+    {
+        // 삭제 대상 중 상세가 열려 있으면 닫는다(재생 중지).
+        if (SelectedItem is { } sel && items.Any(i => i.Id == sel.Id))
+            SelectedItem = null;
+
+        var deleted = 0;
+        foreach (var item in items)
+        {
+            try
+            {
+                TryDelete(item.Model.FilePath);
+                if (item.Model.TranscriptPath is { } tp) TryDelete(tp);
+                await _store.DeleteAsync(item.Model.Id);
+                deleted++;
+            }
+            catch (Exception ex)
+            {
+                StatusText = $"일부 삭제 실패: {ex.Message}";
+            }
+        }
+
+        await LoadAsync();
+        return deleted;
+    }
+
+    /// <summary>목록 항목 체크 상태가 바뀌면 버튼 라벨/개수를 갱신하기 위해 호출.</summary>
+    public void NotifyCheckedChanged()
+    {
+        OnPropertyChanged(nameof(CheckedCount));
+        OnPropertyChanged(nameof(SelectionDeleteLabel));
+        OnPropertyChanged(nameof(SelectionCountText));
     }
 
     /// <summary>목록 항목 이름 수정(메타데이터만 변경, 파일은 유지).</summary>

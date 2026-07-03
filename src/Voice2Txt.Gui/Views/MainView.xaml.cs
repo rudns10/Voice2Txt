@@ -33,6 +33,14 @@ public sealed partial class MainView : UserControl
             Focus(FocusState.Programmatic);
         }
 
+        // 선택(일괄 삭제) 모드에서는 행 클릭 선택을 끈다(체크박스로만 선택).
+        if (e.PropertyName == nameof(MainViewModel.IsSelectionMode))
+        {
+            RecordingList.SelectionMode = ViewModel.IsSelectionMode
+                ? ListViewSelectionMode.None
+                : ListViewSelectionMode.Single;
+        }
+
         // 상세 VM이 바뀌면 현재 구간 자동 스크롤 이벤트를 다시 연결
         if (e.PropertyName == nameof(MainViewModel.Detail))
         {
