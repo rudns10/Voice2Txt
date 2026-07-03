@@ -39,7 +39,7 @@ public static class WhisperModelCatalog
         DownloadUrl: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin",
         SizeBytes: 574_041_195);
 
-    /// <summary>실시간 자막 모드. 응답성을 위해 small 파일을 사용하되 별도 항목으로 노출.</summary>
+    /// <summary>실시간 자막용 모델. 응답성을 위해 small 파일을 사용(드롭다운엔 노출 안 함, 토글로 제어).</summary>
     public static readonly WhisperModel Live = new(
         Key: "live",
         DisplayName: "실시간 자막 (small)",
@@ -49,7 +49,8 @@ public static class WhisperModelCatalog
 
     public static readonly WhisperModel Default = Small;
 
-    public static IReadOnlyList<WhisperModel> All { get; } = new[] { Small, Medium, LargeTurbo, Live };
+    /// <summary>드롭다운에 노출되는 변환 모델(실시간 자막은 별도 토글이라 제외).</summary>
+    public static IReadOnlyList<WhisperModel> All { get; } = new[] { Small, Medium, LargeTurbo };
 
     /// <summary>실시간 자막 모드 여부.</summary>
     public static bool IsLive(WhisperModel m) => m.Key == Live.Key;

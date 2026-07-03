@@ -8,6 +8,9 @@ public sealed class AppSettings
 {
     public string ModelKey { get; set; } = WhisperModelCatalog.Default.Key;
 
+    /// <summary>실시간 자막(녹음 중 자막 표시) 사용 여부.</summary>
+    public bool LiveCaptions { get; set; }
+
     /// <summary>테마: "System" | "Light" | "Dark".</summary>
     public string Theme { get; set; } = "System";
 

@@ -46,15 +46,17 @@ public partial class MainViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(ShowLiveCaptions))]
     private bool _isBusy;
 
-    // ── 실시간 자막 ── (드롭다운에서 "실시간 자막" 항목을 고르면 켜짐)
+    // ── 실시간 자막 ── (독립 토글로 켜고 끔. 모델 선택과 무관)
     [ObservableProperty]
     private string _liveText = "";
 
-    /// <summary>드롭다운에서 "실시간 자막" 모델이 선택됐는지.</summary>
-    public bool LiveCaptionEnabled => WhisperModelCatalog.IsLive(SelectedModel);
+    /// <summary>실시간 자막 사용 여부(사용자 토글, 설정에 저장).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowLiveCaptions))]
+    private bool _liveCaptions;
 
     /// <summary>녹음 화면에서 실시간 자막 영역 표시 여부.</summary>
-    public bool ShowLiveCaptions => IsBusy && LiveCaptionEnabled;
+    public bool ShowLiveCaptions => IsBusy && LiveCaptions;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(PauseButtonText))]
@@ -121,8 +123,6 @@ public partial class MainViewModel : ObservableObject
     /// <summary>현재 선택된 변환 모델(설정에 저장됨).</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ConvertEngineLabel))]
-    [NotifyPropertyChangedFor(nameof(LiveCaptionEnabled))]
-    [NotifyPropertyChangedFor(nameof(ShowLiveCaptions))]
     private WhisperModel _selectedModel = WhisperModelCatalog.Default;
 
     /// <summary>"Whisper small (q5_1) · 로컬(오프라인) 처리" 표시.</summary>
@@ -170,6 +170,7 @@ public partial class MainViewModel : ObservableObject
         var settings = AppSettingsStore.Load();
         _selectedModel = WhisperModelCatalog.All.FirstOrDefault(m => m.Key == settings.ModelKey)
                          ?? WhisperModelCatalog.Default;
+        _liveCaptions = settings.LiveCaptions;
 
         _dispatcher = DispatcherQueue.GetForCurrentThread();
         _recorder.LevelAvailable += (_, level) => _lastPeak = level.Peak;
@@ -230,6 +231,13 @@ public partial class MainViewModel : ObservableObject
         s.ModelKey = value.Key;
         AppSettingsStore.Save(s);
         WarmupEngine(); // 바뀐 모델로 미리 로드
+    }
+
+    partial void OnLiveCaptionsChanged(bool value)
+    {
+        var s = AppSettingsStore.Load();
+        s.LiveCaptions = value;
+        AppSettingsStore.Save(s);
     }
 
     /// <summary>목록 선택 해제 → 대기/녹음 메인 화면으로 복귀.</summary>
@@ -504,16 +512,18 @@ public partial class MainViewModel : ObservableObject
     /// <summary>라이브 자막이 켜져있고 모델이 있으면 실시간 변환을 시작한다.</summary>
     private void StartLiveIfEnabled()
     {
-        if (!LiveCaptionEnabled) return;
-        if (!_models.IsDownloaded(SelectedModel))
+        if (!LiveCaptions) return;
+        // 실시간 자막도 선택한 변환 모델을 사용(small=빠름 / medium·large=정확하지만 지연 가능)
+        var liveModel = SelectedModel;
+        if (!_models.IsDownloaded(liveModel))
         {
-            StatusText = $"실시간 자막 모델({SelectedModel.DisplayName})이 없어 자막은 생략됩니다.";
+            StatusText = $"실시간 자막용 모델({liveModel.DisplayName})이 없어 자막은 생략됩니다. (해당 모델로 변환 1회 시 자동 다운로드)";
             return;
         }
 
         _recorder.PcmAvailable += OnPcm;
         _live.TextProduced += OnLiveText;
-        _live.Start(_models.GetModelPath(SelectedModel));
+        _live.Start(_models.GetModelPath(liveModel));
         _liveActive = true;
     }
 

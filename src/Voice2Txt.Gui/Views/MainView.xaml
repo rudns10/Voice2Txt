@@ -185,15 +185,32 @@
                 </StackPanel>
             </Border>
 
-            <!-- 변환 모델 (실시간 자막 항목 포함) — 항상 표시 -->
+            <!-- 실시간 자막 토글 + 변환 모델 — 항상 표시 -->
             <Border Grid.Row="4" Padding="12,8"
                     BorderBrush="{ThemeResource Hairline2Brush}" BorderThickness="0,1,0,0">
-                <StackPanel Spacing="4">
-                    <TextBlock Text="변환 모델" FontSize="11" Foreground="{ThemeResource TextTertiaryBrush}" />
-                    <ComboBox HorizontalAlignment="Stretch"
-                              ItemsSource="{x:Bind ViewModel.AvailableModels}"
-                              SelectedItem="{x:Bind ViewModel.SelectedModel, Mode=TwoWay}"
-                              DisplayMemberPath="MenuLabel" />
+                <StackPanel Spacing="8">
+                    <!-- 실시간 자막 on/off -->
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                            <TextBlock Text="실시간 자막" FontSize="12" Foreground="{ThemeResource TextSecondaryBrush}" />
+                            <TextBlock Text="녹음 중 자막 표시(선택 모델)" FontSize="10.5"
+                                       Foreground="{ThemeResource TextTertiaryBrush}" />
+                        </StackPanel>
+                        <ToggleSwitch Grid.Column="1" MinWidth="0" OnContent="" OffContent=""
+                                      IsOn="{x:Bind ViewModel.LiveCaptions, Mode=TwoWay}" />
+                    </Grid>
+                    <!-- 변환 모델 -->
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="변환 모델" FontSize="11" Foreground="{ThemeResource TextTertiaryBrush}" />
+                        <ComboBox HorizontalAlignment="Stretch"
+                                  ItemsSource="{x:Bind ViewModel.AvailableModels}"
+                                  SelectedItem="{x:Bind ViewModel.SelectedModel, Mode=TwoWay}"
+                                  DisplayMemberPath="MenuLabel" />
+                    </StackPanel>
                 </StackPanel>
             </Border>
         </Grid>
