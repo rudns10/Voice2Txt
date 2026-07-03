@@ -17,16 +17,19 @@ public sealed class DialogService : IDialogService
 
     public async Task<bool> ConfirmAsync(string title, string message, string primaryText = "확인", string closeText = "취소")
     {
+        // 버튼 배치: 취소=왼쪽(Primary, 안전 기본), 실행(삭제 등)=오른쪽(Secondary).
+        // Secondary로 두면 Escape/바깥 클릭은 None → 실행 안 됨(오삭제 방지).
+        var hasCancel = !string.IsNullOrEmpty(closeText);
         var dialog = new ContentDialog
         {
             Title = title,
             Content = message,
-            PrimaryButtonText = primaryText,
-            CloseButtonText = closeText,
-            DefaultButton = ContentDialogButton.Close,
+            PrimaryButtonText = closeText,
+            SecondaryButtonText = primaryText,
+            DefaultButton = hasCancel ? ContentDialogButton.Primary : ContentDialogButton.Secondary,
             XamlRoot = RequireXamlRoot()
         };
-        return await dialog.ShowAsync() == ContentDialogResult.Primary;
+        return await dialog.ShowAsync() == ContentDialogResult.Secondary;
     }
 
     public async Task<string?> PickSaveFileAsync(string suggestedName, string extension, string typeName)
