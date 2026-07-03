@@ -11,10 +11,12 @@
   <ItemGroup>
     <PackageReference Include="NAudio" Version="2.2.1" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.16" />
-    <!-- W5: 정식 변환 엔진. Vulkan(가속) + CPU(폴백) 런타임 -->
+    <!-- W5: 정식 변환 엔진. 가속 우선순위 CUDA(NVIDIA) → Vulkan(인텔/AMD) → CPU(폴백) -->
     <PackageReference Include="Whisper.net" Version="1.9.1" />
     <PackageReference Include="Whisper.net.Runtime" Version="1.9.1" />
     <PackageReference Include="Whisper.net.Runtime.Vulkan" Version="1.9.1" />
+    <!-- NVIDIA GPU 가속(cuBLAS 동봉). NVIDIA 없는 PC에선 로드 실패 → Vulkan/CPU로 자동 폴백 -->
+    <PackageReference Include="Whisper.net.Runtime.Cuda" Version="1.9.1" />
   </ItemGroup>
 
 </Project>

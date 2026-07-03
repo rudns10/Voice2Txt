@@ -136,8 +136,10 @@ public sealed class WhisperNetTranscriber : ITranscriber, IDisposable
         lock (RuntimeGate)
         {
             if (_runtimeConfigured) return;
+            // 가속 우선순위: CUDA(NVIDIA) → Vulkan(인텔/AMD) → CPU. 로드 실패 시 다음으로 자동 폴백.
             RuntimeOptions.RuntimeLibraryOrder = new List<RuntimeLibrary>
             {
+                RuntimeLibrary.Cuda,
                 RuntimeLibrary.Vulkan,
                 RuntimeLibrary.Cpu
             };
