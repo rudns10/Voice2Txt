@@ -52,13 +52,19 @@ public sealed class WhisperNetTranscriber : ITranscriber, IDisposable
         var segments = new List<TranscriptSegment>();
         string? lastText = null;
 
+        // 무음 판정용으로 원본 샘플을 한 번 읽어둔다(디코더가 무음에 지어낸 글자 차단).
+        var (samples, sampleRate) = ReadSamples(wavPath);
+
         await using var fs = File.OpenRead(wavPath);
         await foreach (var seg in processor.ProcessAsync(fs, ct))
         {
             var text = seg.Text.Trim();
             if (text.Length == 0) continue;
 
-            // 무음 환각 정형구("감사합니다" 등)는 위치 상관없이 통째로 제거 → 공백 처리
+            // ① 해당 구간의 실제 음량이 무음이면 = 소리가 없는데 뽑아낸 글자 → 버림(공백 처리)
+            if (IsSilentRange(samples, sampleRate, seg.Start, seg.End)) continue;
+
+            // ② 무음 환각 정형구("감사합니다"·"자막 제공·광고 포함" 등)도 제거(백업)
             if (IsHallucination(text)) continue;
 
             // 연속 중복 문장(같은 문구 반복 환각) 제거
@@ -81,7 +87,45 @@ public sealed class WhisperNetTranscriber : ITranscriber, IDisposable
         return new TranscriptResult(segments, fullText);
     }
 
+    // 구간 RMS(16-bit)가 이 값 이하이면 무음으로 간주. 조용한 실제 발화(150~)는 보존하고
+    // 사실상 무음(디코더가 억지로 뽑은 구간, ≈0~수십)만 걸러내도록 보수적으로 낮게 설정.
+    private const double SilenceRms = 80;
+
+    /// <summary>16k/mono/16-bit WAV의 전체 샘플을 읽는다. 형식이 다르거나 실패하면 빈 배열(게이트 비활성).</summary>
+    private static (short[] samples, int rate) ReadSamples(string wavPath)
+    {
+        try
+        {
+            using var reader = new WaveFileReader(wavPath);
+            var fmt = reader.WaveFormat;
+            if (fmt.BitsPerSample != 16 || fmt.Channels != 1)
+                return (Array.Empty<short>(), fmt.SampleRate); // 예상 외 형식이면 게이트 미적용
+            var bytes = new byte[reader.Length];
+            int n = 0, r;
+            while (n < bytes.Length && (r = reader.Read(bytes, n, bytes.Length - n)) > 0) n += r;
+            var samples = new short[n / 2];
+            Buffer.BlockCopy(bytes, 0, samples, 0, samples.Length * 2);
+            return (samples, fmt.SampleRate);
+        }
+        catch { return (Array.Empty<short>(), 16000); }
+    }
+
+    /// <summary>구간 [start,end]의 RMS가 무음 임계 이하이면 true. 샘플이 없으면(못 읽음) false(안전).</summary>
+    private static bool IsSilentRange(short[] samples, int rate, TimeSpan start, TimeSpan end)
+    {
+        if (samples.Length == 0 || rate <= 0) return false;
+        int a = Math.Clamp((int)(start.TotalSeconds * rate), 0, samples.Length);
+        int b = Math.Clamp((int)(end.TotalSeconds * rate), a, samples.Length);
+        long count = b - a;
+        if (count <= 0) return false;
+
+        double sumSq = 0;
+        for (int i = a; i < b; i++) { double s = samples[i]; sumSq += s * s; }
+        return Math.Sqrt(sumSq / count) < SilenceRms;
+    }
+
     // Whisper가 무음/저음량 구간에서 흔히 지어내는 정형구(유튜브 자막 학습 흔적).
+    // 전체가 이것(또는 그 반복)일 때만 제거 — 문장 속 진짜 "감사합니다"는 보존.
     private static readonly string[] HallucinationPhrases =
     {
         "감사합니다", "고맙습니다", "수고하셨습니다",
@@ -91,19 +135,32 @@ public sealed class WhisperNetTranscriber : ITranscriber, IDisposable
         "MBC 뉴스 김종국입니다",
     };
 
+    // 회의/메모엔 거의 안 나오는 강한 유튜브 정형구 — 문장 어디에 섞여 있어도 그 구간 통째 제거.
+    private static readonly string[] HallucinationContains =
+    {
+        "광고를 포함", "유료 광고", "시청해 주셔", "시청해주셔",
+        "구독과 좋아요", "구독 좋아요", "좋아요 부탁", "자막 제공",
+        "다음 영상에서", "다음 시간에 만나", "채널에 오신",
+    };
+
     // 앞뒤에서 벗겨낼 기호(대시/따옴표/문장부호/공백). Whisper가 대화체에 "-"를 자주 붙인다.
     private static readonly char[] TrimChars =
         { '-', '–', '—', '.', ',', '!', '?', '…', ' ', '"', '\'', '·', '~', '(', ')', '[', ']' };
 
-    /// <summary>텍스트 전체가 환각 정형구(또는 그 반복)면 true. 문장 속 일부는 건드리지 않는다.</summary>
+    /// <summary>환각 정형구면 true. 강한 유튜브 문구는 문장에 섞여 있어도, 나머지는 전체 일치일 때만.</summary>
     public static bool IsHallucination(string text)
     {
         var t = text.Trim(TrimChars);
         if (t.Length == 0) return false;
+
+        // 1) 강한 유튜브 정형구가 문장 어디에든 포함되면 제거
+        foreach (var m in HallucinationContains)
+            if (t.Contains(m, StringComparison.Ordinal)) return true;
+
+        // 2) 전체가 정형구(또는 그 반복)면 제거 — 대화 속 일부는 보존
         foreach (var p in HallucinationPhrases)
         {
             if (t == p) return true;
-            // "감사합니다 감사합니다"처럼 같은 정형구만 반복된 경우도 제거
             if (t.Length > p.Length && t.Replace(p, "").Trim(TrimChars).Length == 0) return true;
         }
         return false;
