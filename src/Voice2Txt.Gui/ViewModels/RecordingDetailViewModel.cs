@@ -301,8 +301,19 @@ public partial class RecordingDetailViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void ToggleEdit()
     {
-        if (!IsEditing) IsEditing = true;
+        if (!IsEditing)
+        {
+            // 편집은 "한 줄 = 한 구간"으로 시작(저장 시 타임스탬프와 다시 짝지음)
+            EditText = _transcript is { Segments.Count: > 0 }
+                ? string.Join("\n", _transcript.Segments.Select(s => s.Text))
+                : (_transcript?.FullText ?? "");
+            IsEditing = true;
+        }
     }
+
+    /// <summary>편집을 취소하고 저장돼 있던 내용으로 되돌린다(구간/타임스탬프 유지).</summary>
+    [RelayCommand]
+    private void CancelEdit() => IsEditing = false;
 
     [RelayCommand]
     private async Task SaveEditAsync()
@@ -312,10 +323,47 @@ public partial class RecordingDetailViewModel : ObservableObject, IDisposable
             IsEditing = false;
             return;
         }
-        // 전체 텍스트만 갱신(세그먼트/타임스탬프는 유지)
-        _transcript = _transcript with { FullText = EditText };
+
+        // 편집된 각 줄을 원래 구간의 타임스탬프와 순서대로 다시 짝짓는다(타임스탬프 보존).
+        // WinUI TextBox는 줄바꿈을 '\r'로 두므로 '\r'·'\n' 모두로 분리한다.
+        var oldSegs = _transcript.Segments;
+        var lines = EditText
+            .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(l => l.Trim())
+            .Where(l => l.Length > 0)
+            .ToList();
+
+        var newSegs = new List<TranscriptSegment>();
+        for (int i = 0; i < lines.Count; i++)
+        {
+            if (i < oldSegs.Count)
+                newSegs.Add(new TranscriptSegment(oldSegs[i].Start, oldSegs[i].End, lines[i]));
+            else
+            {
+                // 원래보다 줄이 늘어난 경우: 직전 구간 끝 시각을 이어 붙임
+                var start = newSegs.Count > 0 ? newSegs[^1].End : TimeSpan.Zero;
+                newSegs.Add(new TranscriptSegment(start, start, lines[i]));
+            }
+        }
+
+        _transcript = new TranscriptResult(newSegs, string.Join(" ", lines));
         await TranscriptFile.SaveAsync(tp, _transcript);
+
+        RebuildSegmentsView();  // 타임스탬프 목록(첫 번째 화면)으로 복귀
         IsEditing = false;
+    }
+
+    /// <summary>_transcript 구간으로 화면 목록을 다시 만든다(타임스탬프 포함).</summary>
+    private void RebuildSegmentsView()
+    {
+        ClearActiveSegment();
+        Segments.Clear();
+        if (_transcript is null) return;
+        foreach (var s in _transcript.Segments)
+            Segments.Add(new SegmentRow(
+                $"{(int)s.Start.TotalMinutes:00}:{s.Start.Seconds:00}", s.Text, s.Start, s.End));
+        OnPropertyChanged(nameof(ShowTranscriptList));
+        OnPropertyChanged(nameof(ShowEmptyResult));
     }
 
     private void StopAndRelease()

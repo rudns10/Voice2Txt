@@ -430,6 +430,8 @@
                             Visibility="{x:Bind ViewModel.Detail.IsTranscribed, Mode=OneWay, Converter={StaticResource BoolToVis}}">
                     <Button Command="{x:Bind ViewModel.Detail.ToggleEditCommand, Mode=OneWay}" Content="편집"
                             Visibility="{x:Bind ViewModel.Detail.IsReadOnlyView, Mode=OneWay, Converter={StaticResource BoolToVis}}" />
+                    <Button Command="{x:Bind ViewModel.Detail.CancelEditCommand, Mode=OneWay}" Content="편집 취소"
+                            Visibility="{x:Bind ViewModel.Detail.IsEditing, Mode=OneWay, Converter={StaticResource BoolToVis}}" />
                     <Button Command="{x:Bind ViewModel.Detail.SaveEditCommand, Mode=OneWay}" Content="편집 저장"
                             Style="{ThemeResource AccentButtonStyle}"
                             Visibility="{x:Bind ViewModel.Detail.IsEditing, Mode=OneWay, Converter={StaticResource BoolToVis}}" />
