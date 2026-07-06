@@ -131,8 +131,8 @@ public partial class MainViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(ConvertEngineLabel))]
     private WhisperModel _selectedModel = WhisperModelCatalog.Default;
 
-    /// <summary>"Whisper small (q5_1) · 로컬(오프라인) 처리" 표시.</summary>
-    public string ConvertEngineLabel => $"Whisper {SelectedModel.DisplayName} · 로컬(오프라인) 처리";
+    /// <summary>"Whisper small (q5_1)" 표시.</summary>
+    public string ConvertEngineLabel => $"Whisper {SelectedModel.DisplayName}";
 
     /// <summary>대기 화면(녹음 전) 표시 여부.</summary>
     public bool IsIdle => !IsBusy && !IsConverting && !IsDetail;

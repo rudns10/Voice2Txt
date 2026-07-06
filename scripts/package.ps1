@@ -5,8 +5,9 @@
 
 .PARAMETER Models
   zip에 동봉할 모델 키 목록. 예: small / medium / "small","medium" / none
-  동봉하면 인터넷 없이 즉시 변환 가능(폐쇄망용, zip 커짐). 기본값 small.
-  모델 파일은 %LOCALAPPDATA%\Voice2Txt\models 에서 가져오므로,
+  동봉하면 인터넷 없이 즉시 변환 가능(폐쇄망용, zip 커짐).
+  기본값 none = 미포함(앱에서 '텍스트 변환' 누를 때 1회 다운로드).
+  동봉할 경우 모델 파일은 %LOCALAPPDATA%\Voice2Txt\models 에서 가져오므로,
   없으면 먼저 앱에서 해당 모델로 1회 변환해 받아두세요.
 
 .NOTES
@@ -14,15 +15,15 @@
   - 대상: Windows 10/11 x64.
 
 .EXAMPLE
-  pwsh scripts/package.ps1                       # small 동봉
-  pwsh scripts/package.ps1 -Models none          # 모델 미포함(첫 실행 시 다운로드)
+  pwsh scripts/package.ps1                       # 모델 미포함(첫 변환 시 다운로드) — 기본
+  pwsh scripts/package.ps1 -Models small         # small 동봉(폐쇄망용)
   pwsh scripts/package.ps1 -Models small,medium  # 둘 다 동봉
 #>
 param(
     [string]$Configuration = "Release",
     [string]$Rid = "win-x64",
     [string]$Version = "0.0.1",
-    [string[]]$Models = @("small")
+    [string[]]$Models = @("none")
 )
 
 $ErrorActionPreference = "Stop"
