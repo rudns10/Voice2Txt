@@ -35,9 +35,10 @@
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
-        <!-- ── 사이드바 ── -->
+        <!-- ── 사이드바 (오디오 파일 드래그&드롭 가져오기) ── -->
         <Grid Grid.Column="0" Background="{ThemeResource LayerFillColorAltBrush}"
-              BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="0,0,1,0">
+              BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="0,0,1,0"
+              AllowDrop="True" DragOver="OnListDragOver" Drop="OnListDrop">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
@@ -177,7 +178,8 @@
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
                         <Button Grid.Column="0" HorizontalAlignment="Stretch"
-                                Command="{x:Bind ViewModel.DeleteAllCommand}" Content="전체 삭제" />
+                                Command="{x:Bind ViewModel.ToggleSelectAllCommand}"
+                                Content="{x:Bind ViewModel.SelectAllLabel, Mode=OneWay}" />
                         <Button Grid.Column="1" HorizontalAlignment="Stretch" Style="{StaticResource DangerButton}"
                                 Command="{x:Bind ViewModel.DeleteSelectedCommand}"
                                 Content="{x:Bind ViewModel.SelectionDeleteLabel, Mode=OneWay}" />

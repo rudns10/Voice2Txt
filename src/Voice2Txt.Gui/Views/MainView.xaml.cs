@@ -1,7 +1,10 @@
+using System.Linq;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Voice2Txt.Gui.ViewModels;
+using Windows.ApplicationModel.DataTransfer;
+using Windows.Storage;
 
 namespace Voice2Txt.Gui.Views;
 
@@ -101,5 +104,42 @@ public sealed partial class MainView : UserControl
     {
         if ((sender as FrameworkElement)?.DataContext is RecordingItemViewModel item)
             await ViewModel.DeleteRecordingAsync(item);
+    }
+
+    // ── 오디오 파일 드래그&드롭 가져오기 ──
+    private void OnListDragOver(object sender, DragEventArgs e)
+    {
+        if (!e.DataView.Contains(StandardDataFormats.StorageItems)) return;
+        e.AcceptedOperation = DataPackageOperation.Copy;
+        e.DragUIOverride.Caption = "오디오 가져오기";
+        e.DragUIOverride.IsCaptionVisible = true;
+        e.DragUIOverride.IsGlyphVisible = true;
+    }
+
+    private async void OnListDrop(object sender, DragEventArgs e)
+    {
+        if (!e.DataView.Contains(StandardDataFormats.StorageItems)) return;
+
+        // 비동기 가져오기 동안 드래그 소스가 차단되지 않도록 deferral 사용
+        var deferral = e.GetDeferral();
+        try
+        {
+            var items = await e.DataView.GetStorageItemsAsync();
+            var files = items.OfType<StorageFile>()
+                .Where(f => MainViewModel.SupportedAudioExtensions
+                    .Contains(f.FileType.ToLowerInvariant()))
+                .Select(f => f.Path)
+                .ToList();
+
+            if (files.Count == 0)
+            {
+                ViewModel.StatusText = "지원하는 오디오 파일이 아닙니다 (wav·mp3·m4a·aac·wma·flac).";
+                return;
+            }
+
+            foreach (var path in files)
+                await ViewModel.ImportFileAsync(path);
+        }
+        finally { deferral.Complete(); }
     }
 }

@@ -102,6 +102,12 @@ public partial class MainViewModel : ObservableObject
     /// <summary>플로팅 바 좌측 안내 텍스트.</summary>
     public string SelectionCountText => CheckedCount > 0 ? $"{CheckedCount}개 선택됨" : "삭제할 항목을 체크하세요";
 
+    /// <summary>현재 보이는 목록이 전부 체크됐는지.</summary>
+    public bool IsAllChecked => Recordings.Count > 0 && Recordings.All(i => i.IsChecked);
+
+    /// <summary>"전체 선택 / 선택 해제" 토글 버튼 라벨.</summary>
+    public string SelectAllLabel => IsAllChecked ? "선택 해제" : "전체 선택";
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ConvertProgressText))]
     private double _convertPercent;
@@ -249,18 +255,32 @@ public partial class MainViewModel : ObservableObject
     }
 
     /// <summary>오디오 파일을 불러와 16kHz WAV로 변환·등록 후 바로 STT.</summary>
+    /// <summary>가져오기 가능한 오디오 확장자(파일 선택/드래그&드롭 공용).</summary>
+    public static readonly string[] SupportedAudioExtensions =
+        { ".wav", ".mp3", ".m4a", ".aac", ".wma", ".flac" };
+
     [RelayCommand]
     private async Task ImportAudioAsync()
     {
         var source = await _dialog.PickAudioFileAsync();
         if (source is null) return;
+        await ImportFileAsync(source);
+    }
+
+    /// <summary>주어진 오디오 파일을 16kHz WAV로 변환·등록 후 바로 STT한다(버튼/드래그&드롭 공용).</summary>
+    public async Task ImportFileAsync(string source)
+    {
+        // 녹음/변환 중에는 무시(화면 충돌 방지)
+        if (IsBusy || IsConverting) return;
 
         StatusText = "오디오 가져오는 중…";
         Recording rec;
         try
         {
-            var name = Path.GetFileNameWithoutExtension(source);
-            var targetWav = UniquePath(StoragePaths.DefaultRecordingsDir, SanitizeFileName(name));
+            var originalName = Path.GetFileNameWithoutExtension(source);
+            var targetWav = UniquePath(StoragePaths.DefaultRecordingsDir, SanitizeFileName(originalName));
+            // 중복 이름이면 파일명이 "이름 (1)", "이름 (2)"… 로 붙으므로 표시 이름도 그걸 따른다.
+            var name = Path.GetFileNameWithoutExtension(targetWav);
             var duration = await AudioImporter.ToWhisperWavAsync(source, targetWav);
 
             rec = new Recording
@@ -272,16 +292,13 @@ public partial class MainViewModel : ObservableObject
             };
             await _store.AddAsync(rec);
             await LoadAsync();
-            StatusText = $"가져옴: {rec.Name}";
+            // 자동 변환하지 않음 — 목록에만 추가. 변환은 사용자가 항목 선택 후 직접.
+            StatusText = $"가져옴: {rec.Name} · 변환하려면 목록에서 선택하세요";
         }
         catch (Exception ex)
         {
             StatusText = $"불러오기 실패: {ex.Message}";
-            return;
         }
-
-        // 바로 변환
-        await ConvertRecordingAsync(rec);
     }
 
     partial void OnSelectedItemChanged(RecordingItemViewModel? value)
@@ -352,25 +369,14 @@ public partial class MainViewModel : ObservableObject
         StatusText = $"{n}개 삭제됨";
     }
 
-    /// <summary>현재 목록(검색 필터 적용)에 보이는 모든 녹음을 삭제.</summary>
+    /// <summary>현재 보이는 목록을 전체 선택 ↔ 선택 해제 토글.</summary>
     [RelayCommand]
-    private async Task DeleteAllAsync()
+    private void ToggleSelectAll()
     {
-        var targets = Recordings.ToList();
-        if (targets.Count == 0)
-        {
-            StatusText = "삭제할 항목이 없습니다.";
-            return;
-        }
-
-        var scope = SearchText.Trim().Length > 0 ? "검색된 " : "전체 ";
-        var ok = await _dialog.ConfirmAsync(
-            "전체 삭제", $"{scope}{targets.Count}개 녹음을 모두 삭제할까요? 되돌릴 수 없습니다.", "삭제");
-        if (!ok) return;
-
-        var n = await DeleteItemsAsync(targets);
-        IsSelectionMode = false;
-        StatusText = $"{n}개 삭제됨";
+        var check = !IsAllChecked;            // 전부 체크돼 있으면 해제, 아니면 전체 선택
+        foreach (var item in Recordings)
+            item.IsChecked = check;
+        NotifyCheckedChanged();
     }
 
     /// <summary>여러 항목의 파일 + transcript + 메타데이터를 삭제하고 목록을 새로고침한다. (확인창은 호출부에서 1회)</summary>
@@ -406,6 +412,8 @@ public partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(CheckedCount));
         OnPropertyChanged(nameof(SelectionDeleteLabel));
         OnPropertyChanged(nameof(SelectionCountText));
+        OnPropertyChanged(nameof(IsAllChecked));
+        OnPropertyChanged(nameof(SelectAllLabel));
     }
 
     /// <summary>목록 항목 이름 수정(메타데이터만 변경, 파일은 유지).</summary>
